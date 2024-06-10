@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_native_splash/flutter_native_splash.dart';
-import 'package:playfield/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:playfield/firebase_options.dart';
+import 'package:playfield/widgets/footer.dart';
+import 'package:playfield/widgets/HeaderLogo.dart';
 
 void main() async {
-  WidgetsBinding widgetsbinding = WidgetsFlutterBinding.ensureInitialized();
-  // FlutterNativeSplash.preserve(widgetsBinding: widgetsbinding);
+  WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  // await Future.delayed(const Duration(seconds: 4));
-// FlutterNativeSplash.remove();
   runApp(const MyApp());
 }
 
@@ -20,70 +17,131 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Firebase Login',
+      title: 'MatchHive',
       theme: ThemeData(
+        brightness: Brightness.dark,
         primarySwatch: Colors.blue,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
-      home: const LoginPage(),
+      home: const MainPage(),
     );
   }
 }
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({Key? key}) : super(key: key);
+class MainPage extends StatefulWidget {
+  const MainPage({Key? key}) : super(key: key);
 
   @override
-  _LoginPageState createState() => _LoginPageState();
+  _MainPageState createState() => _MainPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+class _MainPageState extends State<MainPage> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   String _errorMessage = '';
+
+  Future<void> _signInWithEmailAndPassword() async {
+    try {
+      final UserCredential user =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+      print('Logged in successfully: ${user.user}');
+    } catch (e) {
+      print('Error logging in: $e');
+      setState(() {
+        _errorMessage = e.toString();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login to Firebase'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-              keyboardType: TextInputType.emailAddress,
+      backgroundColor: Colors.black,
+      body: Column(
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: HeaderLogo(),
+          ),
+          SizedBox(height: MediaQuery.of(context).size.height * 0.15),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: LoginForm(
+                emailController: _emailController,
+                passwordController: _passwordController,
+                onLoginPressed: _signInWithEmailAndPassword,
+                errorMessage: _errorMessage,
+              ),
             ),
-            TextField(
-              controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Password'),
-              obscureText: true,
-            ),
-            if (_errorMessage.isNotEmpty)
-              Text(_errorMessage, style: const TextStyle(color: Colors.red)),
-            ElevatedButton(
-              onPressed: _login,
-              child: const Text('Login'),
-            ),
-          ],
-        ),
+          ),
+          Footer(),
+        ],
       ),
     );
   }
+}
 
-  Future<void> _login() async {
-    try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-    } on FirebaseAuthException catch (e) {
-      setState(() {
-        _errorMessage = e.message ?? 'Failed to login';
-      });
-    }
+
+class LoginForm extends StatelessWidget {
+  final TextEditingController emailController;
+  final TextEditingController passwordController;
+  final VoidCallback onLoginPressed;
+  final String errorMessage;
+
+  const LoginForm({
+    Key? key,
+    required this.emailController,
+    required this.passwordController,
+    required this.onLoginPressed,
+    this.errorMessage = '',
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: <Widget>[
+        TextField(
+          controller: emailController,
+          decoration: InputDecoration(
+            hintText: 'Email',
+            fillColor: Colors.grey[850],
+            filled: true,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        SizedBox(height: 20),
+        TextField(
+          controller: passwordController,
+          obscureText: true,
+          decoration: InputDecoration(
+            hintText: 'Password',
+            fillColor: Colors.grey[850],
+            filled: true,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+        SizedBox(height: 20),
+        ElevatedButton(
+          onPressed: onLoginPressed,
+          style: ElevatedButton.styleFrom(
+            minimumSize: Size(double.infinity, 50),
+          ),
+          child: const Text('Log In'),
+        ),
+        if (errorMessage.isNotEmpty)
+          Text(errorMessage, style: const TextStyle(color: Colors.red)),
+      ],
+    );
   }
 }
+
